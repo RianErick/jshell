@@ -1,7 +1,19 @@
-ls
-history
 clear
 ls
 pwd
-teste
+cd /
+ls
+cd ..
+cd /
+ls
+help
+exit
+ls
+docker ps
+ls
+cd ..
+ls
+cd .
+cd /
+ls
 clear

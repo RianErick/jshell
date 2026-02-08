@@ -4,13 +4,16 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 import static util.InputOutputSystem.*;
 
 public class Main {
     private static File currentDirectory = new File(System.getProperty("user.dir"));
+    private static final int TERMINAL_WIDTH = 80;
 
     public static void main(String[] args) throws IOException {
         File histFile = new File("hist.txt");
@@ -73,6 +76,10 @@ public class Main {
                 log(Colors.BLUE, currentDirectory.getAbsolutePath());
                 return true;
 
+            case "ls":
+                listFiles(arguments);
+                return true;
+
             case "history":
                 findHistory();
                 return true;
@@ -88,6 +95,186 @@ public class Main {
 
             default:
                 return false;
+        }
+    }
+
+    private static void listFiles(List<String> arguments) {
+        boolean showHidden = false;
+        boolean longFormat = false;
+        String targetPath = null;
+
+        for (String arg : arguments) {
+            if (arg.startsWith("-")) {
+                if (arg.contains("a")) showHidden = true;
+                if (arg.contains("l")) longFormat = true;
+            } else {
+                targetPath = arg;
+            }
+        }
+
+        File dir = targetPath != null ? new File(currentDirectory, targetPath) : currentDirectory;
+        
+        if (!dir.exists()) {
+            log(Colors.RED, "ls: " + targetPath + ": Não encontrado");
+            return;
+        }
+
+        File[] files = dir.listFiles();
+        if (files == null) {
+            log(Colors.RED, "ls: Não foi possível listar o diretório");
+            return;
+        }
+
+        Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+
+        List<File> fileList = new ArrayList<>();
+        for (File file : files) {
+            if (!showHidden && file.getName().startsWith(".")) {
+                continue;
+            }
+            fileList.add(file);
+        }
+
+        if (longFormat) {
+            printLongFormat(fileList);
+        } else {
+            printColumnsFormat(fileList);
+        }
+    }
+
+    private static void printLongFormat(List<File> files) {
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm");
+        long totalSize = 0;
+
+        for (File file : files) {
+            totalSize += file.length() / 1024;
+        }
+        System.out.println("total " + totalSize);
+
+        for (File file : files) {
+            StringBuilder line = new StringBuilder();
+            
+            String perms = getPermissions(file);
+            line.append(perms).append(" ");
+            
+            line.append(String.format("%3d ", 1));
+            
+            String owner = System.getProperty("user.name");
+            line.append(String.format("%-8s %-8s ", owner, owner));
+            
+            line.append(String.format("%8d ", file.length()));
+            
+            line.append(sdf.format(new Date(file.lastModified()))).append(" ");
+            
+            line.append(getColoredFileName(file));
+            
+            System.out.println(line);
+        }
+    }
+
+    private static String getPermissions(File file) {
+        StringBuilder perms = new StringBuilder();
+        
+        if (file.isDirectory()) {
+            perms.append("d");
+        } else if (isSymlink(file)) {
+            perms.append("l");
+        } else {
+            perms.append("-");
+        }
+
+        try {
+            Set<PosixFilePermission> posixPerms = Files.getPosixFilePermissions(file.toPath());
+            
+            perms.append(posixPerms.contains(PosixFilePermission.OWNER_READ) ? "r" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.OWNER_WRITE) ? "w" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.OWNER_EXECUTE) ? "x" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.GROUP_READ) ? "r" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.GROUP_WRITE) ? "w" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.GROUP_EXECUTE) ? "x" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.OTHERS_READ) ? "r" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.OTHERS_WRITE) ? "w" : "-");
+            perms.append(posixPerms.contains(PosixFilePermission.OTHERS_EXECUTE) ? "x" : "-");
+        } catch (IOException e) {
+            perms.append(file.canRead() ? "r" : "-");
+            perms.append(file.canWrite() ? "w" : "-");
+            perms.append(file.canExecute() ? "x" : "-");
+            perms.append("------");
+        }
+        
+        return perms.toString();
+    }
+
+    private static void printColumnsFormat(List<File> files) {
+        if (files.isEmpty()) return;
+
+        int maxLen = 0;
+        for (File file : files) {
+            maxLen = Math.max(maxLen, file.getName().length());
+        }
+        maxLen += 2;
+
+        int columns = Math.max(1, TERMINAL_WIDTH / maxLen);
+        int count = 0;
+
+        for (File file : files) {
+            String coloredName = getColoredFileName(file);
+            int padding = maxLen - file.getName().length();
+            
+            System.out.print(coloredName);
+            
+            count++;
+            if (count % columns == 0) {
+                System.out.println();
+            } else {
+                System.out.print(" ".repeat(padding));
+            }
+        }
+        
+        if (count % columns != 0) {
+            System.out.println();
+        }
+    }
+
+    private static String getColoredFileName(File file) {
+        String name = file.getName();
+        String reset = Colors.RESET.getCodigo();
+        
+        if (file.isDirectory()) {
+            return Colors.BLUE.getCodigo() + "\033[1m" + name + "/" + reset;
+        }
+        
+        if (isSymlink(file)) {
+            return Colors.CYAN.getCodigo() + name + reset;
+        }
+        
+        if (file.canExecute() && file.isFile()) {
+            return Colors.GREEN.getCodigo() + "\033[1m" + name + "*" + reset;
+        }
+        
+        if (name.endsWith(".tar") || name.endsWith(".gz") || name.endsWith(".zip") || 
+            name.endsWith(".rar") || name.endsWith(".7z") || name.endsWith(".bz2")) {
+            return Colors.RED.getCodigo() + name + reset;
+        }
+        
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || 
+            name.endsWith(".gif") || name.endsWith(".bmp") || name.endsWith(".svg")) {
+            return Colors.PURPLE.getCodigo() + name + reset;
+        }
+        
+        if (name.endsWith(".java") || name.endsWith(".py") || name.endsWith(".js") ||
+            name.endsWith(".c") || name.endsWith(".cpp") || name.endsWith(".rs")) {
+            return Colors.YELLOW.getCodigo() + name + reset;
+        }
+        
+        return name;
+    }
+
+    private static boolean isSymlink(File file) {
+        try {
+            return Files.isSymbolicLink(file.toPath());
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -167,6 +354,7 @@ public class Main {
         log(Colors.CYAN, "╔══════════════════════════════════════════╗");
         log(Colors.CYAN, "║         rshell - Comandos Builtin        ║");
         log(Colors.CYAN, "╠══════════════════════════════════════════╣");
+        log(Colors.WHITE, "║  ls [-la]   - Lista arquivos             ║");
         log(Colors.WHITE, "║  cd [dir]   - Muda de diretório          ║");
         log(Colors.WHITE, "║  pwd        - Mostra diretório atual     ║");
         log(Colors.WHITE, "║  history    - Mostra histórico           ║");
