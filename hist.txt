@@ -1,19 +1,16 @@
-clear
+history
+ls
+cd opt
+ls
+ls
+ls
+ls
+cd ..
+ls
+telnet google.com
 ls
 pwd
-cd /
-ls
-cd ..
-cd /
+history
 ls
 help
-exit
 ls
-docker ps
-ls
-cd ..
-ls
-cd .
-cd /
-ls
-clear
