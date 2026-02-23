@@ -1,16 +1,21 @@
-history
-ls
-cd opt
-ls
-ls
-ls
 ls
 cd ..
 ls
-telnet google.com
+git status
 ls
-pwd
-history
+cd shell
 ls
-help
+git
+git status
+git branch
 ls
+git add .
+git commit -m "remove: imports"
+git push
+ls
+git branch
+'ls
+ls
+git status
+git add .
+git commit -a -m "remove: imports"
