@@ -1,9 +1,3 @@
-history
-ls
-help
-ls
-ls
-git status
 ls
 cd ..
 ls
@@ -16,3 +10,12 @@ git status
 git branch
 ls
 git add .
+git commit -m "remove: imports"
+git push
+ls
+git branch
+'ls
+ls
+git status
+git add .
+git commit -a -m "remove: imports"
