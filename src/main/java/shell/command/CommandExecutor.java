@@ -1,7 +1,6 @@
 package shell.command;
 
 import shell.io.Terminal;
-import shell.util.AnsiColor;
 
 import java.io.BufferedReader;
 import java.io.File;

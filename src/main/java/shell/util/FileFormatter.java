@@ -144,7 +144,6 @@ public class FileFormatter {
 
     private static String colorize(File file) {
         String name = file.getName();
-        String reset = AnsiColor.RESET.getCode();
 
         if (file.isDirectory()) {
             return AnsiColor.bold(AnsiColor.BLUE, name + "/");

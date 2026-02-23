@@ -1,16 +1,18 @@
 history
 ls
-cd opt
+help
 ls
 ls
-ls
+git status
 ls
 cd ..
 ls
-telnet google.com
+git status
 ls
-pwd
-history
+cd shell
 ls
-help
+git
+git status
+git branch
 ls
+git add .
